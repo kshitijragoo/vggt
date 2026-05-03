@@ -24,7 +24,14 @@ from vggt.utils.load_fn import load_and_preprocess_images
 from vggt.utils.pose_enc import pose_encoding_to_extri_intri
 from vggt.utils.geometry import unproject_depth_map_to_point_map
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
+
+USE_CPU = False
+
+if USE_CPU:
+    device = "cpu"
+else:
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    
 
 print("Initializing and loading VGGT model...")
 # model = VGGT.from_pretrained("facebook/VGGT-1B")  # another way to load the model
@@ -47,10 +54,13 @@ def run_model(target_dir, model) -> dict:
     """
     print(f"Processing images from {target_dir}")
 
-    # Device check
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    if not torch.cuda.is_available():
-        raise ValueError("CUDA is not available. Check your environment.")
+    if USE_CPU:
+        device = "cpu"
+    else:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    # if not torch.cuda.is_available():
+    #     raise ValueError("CUDA is not available. Check your environment.")
 
     # Move model to device
     model = model.to(device)
@@ -93,7 +103,9 @@ def run_model(target_dir, model) -> dict:
     predictions["world_points_from_depth"] = world_points
 
     # Clean up
-    torch.cuda.empty_cache()
+    if not USE_CPU:
+        torch.cuda.empty_cache()
+
     return predictions
 
 
@@ -107,7 +119,9 @@ def handle_uploads(input_video, input_images):
     """
     start_time = time.time()
     gc.collect()
-    torch.cuda.empty_cache()
+    if not USE_CPU:
+        torch.cuda.empty_cache()
+
 
     # Create a unique folder name
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
@@ -201,7 +215,10 @@ def gradio_demo(
 
     start_time = time.time()
     gc.collect()
-    torch.cuda.empty_cache()
+
+    if not USE_CPU:
+        torch.cuda.empty_cache()
+
 
     # Prepare frame_filter dropdown
     target_dir_images = os.path.join(target_dir, "images")
@@ -244,7 +261,10 @@ def gradio_demo(
     # Cleanup
     del predictions
     gc.collect()
-    torch.cuda.empty_cache()
+
+    if not USE_CPU:
+        torch.cuda.empty_cache()
+
 
     end_time = time.time()
     print(f"Total time: {end_time - start_time:.2f} seconds (including IO)")
